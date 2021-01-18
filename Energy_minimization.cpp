@@ -7,7 +7,6 @@
 using namespace std;
 
 // define required variables
-
 //#define epsilon 0.0103 // epsilon for LJ potential
 //#define sigma 3.3      // sigma for LJ potential
 
