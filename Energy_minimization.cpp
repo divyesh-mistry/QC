@@ -39,7 +39,7 @@ double mod(vector<double> vect)
 }
 
 // calculate total energy of system
-double Enrgy(vector<double> q_s)
+double Enrgy(const vector<double>& q_s)
 {
     double sum = 0;
     double r_ij;
