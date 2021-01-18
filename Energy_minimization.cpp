@@ -12,7 +12,7 @@ using namespace std;
 
 #define epsilon 1.0 // epsilon for LJ potential
 #define sigma 1.0   // sigma for LJ potential
-#define Tol 1e-3    // tolerance for steepest descent method
+#define Tol 1e-2    // tolerance for steepest descent method
 #define h 1e-5      // step size
 
 /* Define all required function */
