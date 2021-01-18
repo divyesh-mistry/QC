@@ -13,7 +13,7 @@ using namespace std;
 
 #define epsilon 1.0 // epsilon for LJ potential
 #define sigma 1.0   // sigma for LJ potential
-#define Tol 1e-2    // tolerance for steepest descent method
+#define Tol 1e-3    // tolerance for steepest descent method
 #define h 1e-5      // step size
 
 /* Define all required function */
@@ -96,7 +96,7 @@ vector<double> Force(const vector<double> &q_s) // ds
 int main()
 {
     // Define variables
-    int N = 5;             // number of atoms
+    int N = 11;            // number of atoms
     vector<double> q_s(N); // atom postion
     vector<double> f_s(N); // force on each atom
     vector<double> f(N);
@@ -110,42 +110,43 @@ int main()
     {
         q_s[i] = i * a;
 
-    // Find force vector for N atoms
-    f_s = Force(q_s);
-    // calculate error
-    err = mod(f_s);
-    //cout << err << endl;
-
-    //to write output data
-    ofstream force;
-    force.open("force.txt");
-
-    ofstream energy;
-    energy.open("energy.txt");
-
-    ofstream pos;
-    pos.open("pos.txt");
-    // To keep counting number of iterations
-    int count = 0;
-    // Gradient descent loop
-    while (err > Tol)
-    {
-        count += 1;
-        for (int i = 0; i < N; i++)
-        {
-            q_s[i] = q_s[i] + h * f_s[i];
-            pos << q_s[i] << " ";
-            force << f_s[i] << " ";
-        }
-        pos << endl;
-        force << endl;
+        // Find force vector for N atoms
         f_s = Force(q_s);
+        // calculate error
         err = mod(f_s);
-        double P = Enrgy(q_s);
-        energy << P << endl;
+        //cout << err << endl;
+
+        //to write output data
+        ofstream force;
+        force.open("force.txt");
+
+        ofstream energy;
+        energy.open("energy.txt");
+
+        ofstream pos;
+        pos.open("pos.txt");
+        // To keep counting number of iterations
+        int count = 0;
+        // Gradient descent loop
+        while (err > Tol)
+        {
+            count += 1;
+            for (int i = 0; i < N; i++)
+            {
+                q_s[i] = q_s[i] + h * f_s[i];
+                pos << q_s[i] << " ";
+                force << f_s[i] << " ";
+            }
+            pos << endl;
+            force << endl;
+            f_s = Force(q_s);
+            err = mod(f_s);
+            double P = Enrgy(q_s);
+            energy << P << endl;
+        }
+        force.close();
+        pos.close();
+        energy.close();
     }
-    force.close();
-    pos.close();
-    energy.close();
     return 0;
 }
