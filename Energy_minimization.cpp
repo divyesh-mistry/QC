@@ -74,7 +74,24 @@ int main(int argc, char **argv) {
     pair2dvector.push_back(v_temp);
     v_temp.clear();
   }
-  /* Find r_ij distance for all possible pair of atoms*/
+
+  /* To calculate force on each atoms*/
+  pair<double, double> fpair;          // Pair inside the vector
+  vector<pair<double, double>> f_temp; // Temporary vector to store each pair
+  vector<vector<pair<double, double>>> forcepair2dvector; // Required 2D vectors
+
+  // // vector<double> dist(int(n_rows * n_cols));
+  // for (int i = 0; i < n_rows; i++) {
+
+  //   for (int j = 0; j < n_cols; j++) {
+  //     apair.first = a * i;
+  //     apair.second = a * j;
+  //     v_temp.push_back(apair);
+  //   }
+  //   pair2dvector.push_back(v_temp);
+  //   v_temp.clear();
+  // }
+  // /* Find r_ij distance for all possible pair of atoms*/
 
   for (vector<vector<pair<double, double>>>::iterator it = pair2dvector.begin();
        it != pair2dvector.end(); ++it) {
@@ -89,8 +106,7 @@ int main(int argc, char **argv) {
       auto it = dist.insert(dist.begin(), d_ij);
 
       double err;
-      d_V_lj_dr(r_ijx,r_ijy);
-      
+      d_V_lj_dr(r_ijx, r_ijy);
 
       //   cout << "(" << r_ijx << "," << r_ijy << ") ; ";
     }
@@ -114,10 +130,10 @@ int main(int argc, char **argv) {
   // Define initial postion of each atom (q_s_0)
   // for (int i = 0; i < N; i++) {
   //   q_s[i] = i * a;
-   f_s = Force(q_s);
+  f_s = Force(q_s);
   // calc
   // Find force vector for N atoms
-  //ulate error
+  // ulate error
   // err = mod(f_s);
 
   double P = Enrgy(dist);
