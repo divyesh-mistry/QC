@@ -17,11 +17,11 @@ using namespace std;
 #define Tol 1e-1    // tolerance for steepest descent method
 #define h 1e-5      // step size
 #define NPES 4
-#define NC 100
-#define NR 100
-#define NP (NR / NPES) /* Number of Rows per PE */
-#define DOWN 100       /* Tag for messages down */
-#define UP 101         /* Tag for messages up   */
+
+#define N_atoms 100
+#define NP (N_atoms / NPES) /* Number of Rows per PE */
+#define LEFT 100       /* Tag for messages LEFT */
+#define RIGHT 101      /* Tag for messages RIGHT   */
 #define ROOT 0         /* The root PE           */
 
 /* Define all required function */
@@ -48,7 +48,7 @@ double mod(vector<double> vect) {
 }
 
 // calculate total energy of system
-double Enrgy(const vector<double> &q_s) {
+__global__ void  Enrgy(const vector<double> &	q_s) {
   double sum = 0;
   double r_ij;
   int N = q_s.size();
@@ -101,6 +101,8 @@ int main(int argc, char **argv) {
   int npes;  /* Number of PEs */
   int PE_nu; /* My PE number  */
   int stat;  /* Error Status  */
+  double start, end;
+  int niter; /* iter counter  */
   MPI_Status status;
 
   // Define variables
@@ -127,8 +129,8 @@ int main(int argc, char **argv) {
   double err;
 
   // Define initial postion of each atom (q_s_0)
+  niter = 1000;
 
-  int j;
   MPI_Bcast(&niter, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
   for (int i = 0; i < NP + 1; i++) {
     q_s[i] = i * a;
@@ -154,7 +156,7 @@ int main(int argc, char **argv) {
     // Gradient descent loop
     while (err > Tol) {
       count += 1;
-      for (j = 0; j < NP + 1; j++) {
+      for (int j = 0; j < NP + 1; j++) {
 
         q_s[j] = q_s[j] + h * f_s[j];
 
@@ -163,27 +165,16 @@ int main(int argc, char **argv) {
         pos << q_s[j] << " ";
         force << f_s[j] << " ";
       }
-      if (PE_nu < npes - 1) /*   Sending Down; Only npes-1 do this  */
+      if (PE_nu < npes - 1) /*   Sending LEFT; Only npes-1 do this  */
 
       {
-        MPI_Send(&q_s[NP][1], NC, MPI_FLOAT, PE_nu + 1, DOWN, MPI_COMM_WORLD);
+        MPI_Send(&q_s[NP + 1], N_atoms, MPI_FLOAT, PE_nu + 1, RIGHT, MPI_COMM_WORLD);
       }
 
-      if (PE_nu != 0) /*   Sending Up  ; Only npes-1 do this  */
+      if (PE_nu != 0) /*   Receive from RIGHT */
       {
-        MPI_Send(&q_s[1][1], NC, MPI_FLOAT, PE_nu - 1, UP, MPI_COMM_WORLD);
-      }
-
-      if (PE_nu != 0) /*   Receive from UP */
-      {
-        MPI_Recv(&q_s[0][1], NC, MPI_FLOAT, MPI_ANY_SOURCE, DOWN,
-                 MPI_COMM_WORLD, &status);
-      }
-
-      if (PE_nu != npes - 1) /*   Receive from DOWN */
-      {
-        MPI_Recv(&qs[NP + 1][1], NC, MPI_FLOAT, MPI_ANY_SOURCE, UP,
-                 MPI_COMM_WORLD, &status);
+        MPI_Recv(&q_s[0], N_atoms, MPI_FLOAT, MPI_ANY_SOURCE, LEFT, MPI_COMM_WORLD,
+                 &status);
       }
 
       pos << endl;
