@@ -1,0 +1,207 @@
+// Include library
+#include <cmath>
+#include <cstdio>
+#include <fstream>
+#include <iostream>
+#include <mpi.h>
+#include <vector>
+
+using namespace std;
+
+// define required variables
+//#define epsilon 0.0103 // epsilon for LJ potential
+//#define sigma 3.3      // sigma for LJ potential
+
+#define epsilon 1.0 // epsilon for LJ potential
+#define sigma 1.0   // sigma for LJ potential
+#define Tol 1e-1    // tolerance for steepest descent method
+#define h 1e-5      // step size
+#define NPES 4
+#define NC 100
+#define NR 100
+#define NP (NR / NPES) /* Number of Rows per PE */
+#define DOWN 100       /* Tag for messages down */
+#define UP 101         /* Tag for messages up   */
+#define ROOT 0         /* The root PE           */
+
+/* Define all required function */
+// Function to calculate potential energy
+double V_lj(double r) {
+  double V =
+      (4 * epsilon * (pow(sigma, 12) / pow(r, 12) - pow(sigma, 6) / pow(r, 6)));
+  return V;
+}
+// function to calculate first derivative of Potential energy
+double d_V_lj_dr(double r) {
+  double dV = (-48 * epsilon * pow(sigma, 12) / pow(r, 13) +
+               24 * epsilon * pow(sigma, 6) / pow(r, 7));
+  return dV;
+}
+
+// find mode of given list
+double mod(vector<double> vect) {
+  double sum = 0;
+
+  for (double x : vect)
+    sum = sum + x * x;
+  return sqrt(sum);
+}
+
+// calculate total energy of system
+double Enrgy(const vector<double> &q_s) {
+  double sum = 0;
+  double r_ij;
+  int N = q_s.size();
+  int j;
+#pragma omp parallel for private(j)
+  for (int i = 0; i < N; i++) {
+    for (j = 0; j < N; j++) {
+      if (i < j) {
+        r_ij = abs(q_s[j] - q_s[i]);
+        sum = V_lj(r_ij) + sum;
+      }
+    }
+  }
+  return sum;
+}
+
+// Find total force experiences by i-th atom due to neighbour atoms
+
+vector<double> Force(const vector<double> &q_s) // ds
+{
+  double F;
+  double r_ij;
+  double a = 1.0; // lattice distance
+  double r_cut = 3 * a;
+  int N = q_s.size();
+  vector<double> X(N);
+
+  int j;
+#pragma omp parallel for private(j)
+  for (int i = 0; i < N; i++) {
+    F = 0;
+    for (j = 0; j < N; j++) {
+      if (i != j) {
+        r_ij = abs(q_s[j] - q_s[i]);
+        // Include cutoff
+        if (r_ij < r_cut) {
+          F = F + (-d_V_lj_dr(r_ij) * ((q_s[i] - q_s[j]) / r_ij));
+        }
+      }
+    }
+    // Total force experiences by i-th atom due to neighbour atoms
+    X[i] = F;
+    // cout << X[i] << endl;
+  }
+  return X;
+}
+
+/* Main program*/
+int main(int argc, char **argv) {
+  int npes;  /* Number of PEs */
+  int PE_nu; /* My PE number  */
+  int stat;  /* Error Status  */
+  MPI_Status status;
+
+  // Define variables
+
+  vector<double> q_s(NP + 1); // atom postion
+  vector<double> f_s(NP + 1); // force on each atom
+  vector<double> f(NP + 1);
+
+  MPI_Init(&argc, &argv);
+
+  MPI_Comm_size(MPI_COMM_WORLD, &npes);
+  MPI_Comm_rank(MPI_COMM_WORLD, &PE_nu);
+  start = MPI_Wtime();
+
+  if (npes != NPES) { /* Currently hardcoded */
+    if (PE_nu == 0)
+      fprintf(stdout, "The example is only for %d PEs\n", NPES);
+    MPI_Finalize();
+    exit(1);
+  }
+
+  // Give starting value for function
+  double a = 1.0; // lattice distance
+  double err;
+
+  // Define initial postion of each atom (q_s_0)
+
+  int j;
+  MPI_Bcast(&niter, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
+  for (int i = 0; i < NP + 1; i++) {
+    q_s[i] = i * a;
+
+    // Find force vector for N atoms
+    f_s = Force(q_s);
+    // calculate error
+    err = mod(f_s);
+    // cout << err << endl;
+
+    // to write output data
+    ofstream force;
+    force.open("force.txt");
+
+    ofstream energy;
+    energy.open("energy.txt");
+
+    ofstream pos;
+    pos.open("pos.txt");
+
+    // To keep counting number of iterations
+    int count = 0;
+    // Gradient descent loop
+    while (err > Tol) {
+      count += 1;
+      for (j = 0; j < NP + 1; j++) {
+
+        q_s[j] = q_s[j] + h * f_s[j];
+
+        // Dirichlet boundary condition
+        q_s[0] = 0;
+        pos << q_s[j] << " ";
+        force << f_s[j] << " ";
+      }
+      if (PE_nu < npes - 1) /*   Sending Down; Only npes-1 do this  */
+
+      {
+        MPI_Send(&q_s[NP][1], NC, MPI_FLOAT, PE_nu + 1, DOWN, MPI_COMM_WORLD);
+      }
+
+      if (PE_nu != 0) /*   Sending Up  ; Only npes-1 do this  */
+      {
+        MPI_Send(&q_s[1][1], NC, MPI_FLOAT, PE_nu - 1, UP, MPI_COMM_WORLD);
+      }
+
+      if (PE_nu != 0) /*   Receive from UP */
+      {
+        MPI_Recv(&q_s[0][1], NC, MPI_FLOAT, MPI_ANY_SOURCE, DOWN,
+                 MPI_COMM_WORLD, &status);
+      }
+
+      if (PE_nu != npes - 1) /*   Receive from DOWN */
+      {
+        MPI_Recv(&qs[NP + 1][1], NC, MPI_FLOAT, MPI_ANY_SOURCE, UP,
+                 MPI_COMM_WORLD, &status);
+      }
+
+      pos << endl;
+      force << endl;
+      f_s = Force(q_s);
+      err = mod(f_s);
+      double P = Enrgy(q_s);
+      energy << P << endl;
+      MPI_Barrier(MPI_COMM_WORLD);
+    }
+    force.close();
+    pos.close();
+    energy.close();
+  }
+  end = MPI_Wtime();
+
+  printf("\n Time taken by process %d is %f \n", PE_nu, (end - start));
+
+  MPI_Finalize();
+  return 0;
+}
