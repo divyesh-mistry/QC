@@ -23,6 +23,7 @@ using namespace std;
 #define n_rows 10
 #define n_cols 10
 #define n_atoms 10 * 10
+
 /* Define all required function */
 // Function to calculate potential energy
 double V_lj(double r) {
@@ -61,17 +62,20 @@ double Enrgy(const vector<double> &q_s) {
 
   return sum;
 }
+double mod(vector<double> vect) {
+  double sum = 0;
+  for (double x : vect)
+    sum = sum + x * x;
+  return sqrt(sum);
+}
 int main(int argc, char **argv) {
-  int M, N;
-  M = 10;
-  N = 10;
 
   pair<double, double> apair;
   vector<pair<double, double>> v_temp;
   vector<vector<pair<double, double>>> pair2dvector;
   //   vector<double> dist(int(N * M));
-  for (int i = 0; i < M; i++) {
-    for (int j = 0; j < N; j++) {
+  for (int i = 0; i < n_rows; i++) {
+    for (int j = 0; j < n_cols; j++) {
       apair.first = a * i;
       apair.second = a * j;
       v_temp.push_back(apair);
@@ -121,9 +125,6 @@ int main(int argc, char **argv) {
       fpair.first = fx;
       fpair.second = fy;
 
-      // auto it = dist.insert(dist.begin(), d_ij);
-      //   cout << "(" << r_ijx << "," << r_ijy << ") ; ";
-
       count_j = count_j + 1;
       F_I.push_back(fpair);
     }
@@ -148,62 +149,23 @@ int main(int argc, char **argv) {
     // 1st and 2nd element of pair respectively
     // cout << "(" << F_I[i].first << ", " << F_I[i].second << ")" << endl;
     cout << Fr[i] << endl;
-    // cout << enrgy[i] << endl; //<< ", " << F_I[i].second << ")" <<
-    // endl;
+    cout << enrgy[i] << endl; //<< ", " << F_I[i].second << ")" <<
+
+    // // Gradient descent loop
+    // while (err > Tol) {
+    //   count += 1;
+    //   for (int i = 0; i < N; i++) {
+    //     q_s[i] = q_s[i] + h * F[i];
+    //     pos << q_s[i] << " ";
+    //     force << f_s[i] << " ";
+    //   }
+    //   pos << endl;
+    //   force << endl;
+    //   f_s = Force(q_s);
+    //   err = mod(f_s);
+    //   double P = Enrgy(q_s);
+    //   energy << P << endl;
   }
 
   return 0;
 }
-
-// // find mode of given list
-// double mod(vector<double> vect) {
-//   double sum = 0;
-//   for (double x : vect)
-//     sum = sum + x * x;
-//   return sqrt(sum);
-// }
-
-// calculate total energy of system
-// double Enrgy(const vector<double> &q_s) {
-//   double sum = 0;
-//   double r_ij;
-//   int N = q_s.size();
-
-//   for (int i = 0; i < N; i++) {
-//     for (int j = 0; j < N; j++) {
-//       if (i < j) {
-//         r_ij = abs(q_s[j] - q_s[i]);
-//         sum = V_lj(r_ij) + sum;
-//       }
-//     }
-//   }
-//   return sum;
-// }
-
-// // Find total force experiences by i-th atom due to neighbour atoms
-
-// vector<double> Force(const vector<double> &q_s) // ds
-// {
-//   double F;
-//   double r_ij;
-//   //  double a = 1.0; // lattice distance
-//   double r_cut = 3 * a;
-//   int N = q_s.size();
-//   vector<double> X(N);
-//   for (int i = 0; i < N; i++) {
-//     F = 0;
-//     for (int j = 0; j < N; j++) {
-//       if (i != j) {
-//         r_ij = abs(q_s[j] - q_s[i]);
-//         // Include cutoff
-//         if (r_ij < r_cut) {
-//           F = F + (-d_V_lj_dr(r_ij) * ((q_s[i] - q_s[j]) / r_ij));
-//         }
-//       }
-//     }
-//     // Total force experiences by i-th atom due to neighbour atoms
-//     X[i] = F;
-//     // cout << X[i] << endl;
-//   }
-//   return X;
-// }
